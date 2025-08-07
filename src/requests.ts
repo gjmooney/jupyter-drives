@@ -133,6 +133,23 @@ export async function getContents(
   driveName: string,
   options: { path: string; registeredFileTypes: IRegisteredFileTypes }
 ) {
+  console.log(
+    'debug: getContents() called with driveName:',
+    driveName,
+    'options:',
+    options
+  );
+
+  // Emit custom event for status widget to listen to
+  const event = new CustomEvent('drive-status-update', {
+    detail: {
+      type: 'loading',
+      path: options.path,
+      driveName: driveName
+    }
+  });
+  window.dispatchEvent(event);
+
   const response = await requestAPI<any>(
     'drives/' + driveName + '/' + options.path,
     'GET'
@@ -143,6 +160,19 @@ export async function getContents(
   if (response.data) {
     // listing the contents of a directory
     if (isDir) {
+      console.log('debug: isDir:', isDir);
+
+      // Emit event for directory loaded
+      const loadedEvent = new CustomEvent('drive-status-update', {
+        detail: {
+          type: 'loaded',
+          path: options.path,
+          driveName: driveName,
+          itemType: 'directory'
+        }
+      });
+      window.dispatchEvent(loadedEvent);
+
       const fileList: IContentsList = {};
 
       response.data.forEach((row: any) => {
@@ -190,6 +220,19 @@ export async function getContents(
     }
     // getting the contents of a file
     else {
+      console.log('debug: isFile:');
+
+      // Emit event for file loaded
+      const loadedEvent = new CustomEvent('drive-status-update', {
+        detail: {
+          type: 'loaded',
+          path: options.path,
+          driveName: driveName,
+          itemType: 'file'
+        }
+      });
+      window.dispatchEvent(loadedEvent);
+
       const [fileType, fileMimeType, fileFormat] = getFileType(
         PathExt.extname(PathExt.basename(options.path)),
         options.registeredFileTypes
@@ -207,6 +250,7 @@ export async function getContents(
         writable: true,
         type: fileType
       };
+      console.log('debug: data:', data);
     }
   }
 

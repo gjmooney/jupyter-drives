@@ -186,6 +186,10 @@ export class Drive implements Contents.IDrive {
     Signal.clearData(this);
   }
 
+  get loadingContents(): ISignal<this, LoadingContentsArgs> {
+    return this._loadingContents;
+  }
+
   /**
    * Get an encoded download url given a file path.
    *
@@ -227,7 +231,15 @@ export class Drive implements Contents.IDrive {
     localPath: string,
     options?: Contents.IFetchOptions
   ): Promise<Contents.IModel> {
+    this._loadingContents.emit({
+      type: 'loading',
+      path: localPath,
+      driveName: this._name,
+      itemType: 'directory'
+    });
+
     if (localPath !== '') {
+      console.log('debug: get() called with localPath:', localPath);
       const currentDrive = extractCurrentDrive(localPath, this._drivesList);
 
       // when accessed the first time, mount drive
@@ -290,6 +302,12 @@ export class Drive implements Contents.IDrive {
     }
 
     Contents.validateContentsModel(data);
+    this._loadingContents.emit({
+      type: 'loaded',
+      path: localPath,
+      driveName: this._name,
+      itemType: 'directory'
+    });
     return data;
   }
 
@@ -824,7 +842,15 @@ export class Drive implements Contents.IDrive {
   private _isDisposed: boolean = false;
   private _disposed = new Signal<this, void>(this);
   private _registeredFileTypes: IRegisteredFileTypes = {};
+  private _loadingContents = new Signal<this, LoadingContentsArgs>(this);
 }
+
+type LoadingContentsArgs = {
+  type: 'loading' | 'loaded';
+  path: string;
+  driveName: string;
+  itemType: 'directory' | 'file';
+};
 
 export namespace Drive {
   /**
